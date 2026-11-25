@@ -473,3 +473,9 @@ tbody tr:hover {
   background: #60a5fa;
   color: #fff;
 }
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

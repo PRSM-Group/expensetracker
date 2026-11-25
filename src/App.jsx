@@ -11,13 +11,6 @@ const categories = [
   "Other",
 ];
 
-const sortOptions = [
-  { label: "Default", field: null, direction: "asc" },
-  { label: "Category", field: "category", direction: "asc" },
-  { label: "Amount: Low to High", field: "amount", direction: "asc" },
-  { label: "Amount: High to Low", field: "amount", direction: "desc" },
-];
-
 const categoryColors = {
   Food: "#60a5fa",
   Transportation: "#34d399",
@@ -26,6 +19,61 @@ const categoryColors = {
   Entertainment: "#a78bfa",
   Other: "#94a3b8",
 };
+
+const sortOptions = [
+  { label: "Default", value: "default" },
+  { label: "Category", value: "category" },
+  { label: "Amount: Low to High", value: "amount-asc" },
+  { label: "Amount: High to Low", value: "amount-desc" },
+];
+
+const categoryOptions = [
+  { label: "All", value: "All" },
+  ...categories.map((category) => ({ label: category, value: category })),
+];
+
+function formatDate(date) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-PH", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
+
+function Dropdown({ prefix, options, value, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const current =
+    options.find((option) => option.value === value) ?? options[0];
+
+  return (
+    <div className="sort-dropdown">
+      <button
+        className="sort-button"
+        onClick={() => setOpen((previous) => !previous)}
+      >
+        {prefix}: {current.label} ▾
+      </button>
+
+      {open && (
+        <ul className="sort-menu">
+          {options.map((option) => (
+            <li key={option.value}>
+              <button
+                className={option.value === current.value ? "selected" : ""}
+                onClick={() => {
+                  onSelect(option.value);
+                  setOpen(false);
+                }}
+              >
+                {option.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 function getToday() {
   const today = new Date();
@@ -262,8 +310,9 @@ function App() {
     category: "Food",
     date: getToday(),
   });
-  const [sortBy, setSortBy] = useState({ field: null, direction: "asc" });
-  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [sortKey, setSortKey] = useState("default");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [dateFilter, setDateFilter] = useState("All");
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -311,25 +360,36 @@ function App() {
     );
   };
 
-  const displayedExpenses = [...expenses].sort((a, b) => {
-    if (sortBy.field === "category") {
+  const dateOptions = [
+    { label: "All", value: "All" },
+    ...[...new Set(expenses.map((expense) => expense.date))]
+      .sort()
+      .map((date) => ({ label: formatDate(date), value: date })),
+  ];
+
+  // If the selected date no longer exists (edited or deleted), fall back to All
+  const activeDateFilter = dateOptions.some(
+    (option) => option.value === dateFilter,
+  )
+    ? dateFilter
+    : "All";
+
+  const filteredExpenses = expenses.filter(
+    (expense) =>
+      (categoryFilter === "All" || expense.category === categoryFilter) &&
+      (activeDateFilter === "All" || expense.date === activeDateFilter),
+  );
+
+  const displayedExpenses = [...filteredExpenses].sort((a, b) => {
+    if (sortKey === "category") {
       return categories.indexOf(a.category) - categories.indexOf(b.category);
     }
 
-    if (sortBy.field === "amount") {
-      return sortBy.direction === "asc"
-        ? a.amount - b.amount
-        : b.amount - a.amount;
-    }
+    if (sortKey === "amount-asc") return a.amount - b.amount;
+    if (sortKey === "amount-desc") return b.amount - a.amount;
 
     return 0;
   });
-
-  const currentSort =
-    sortOptions.find(
-      (option) =>
-        option.field === sortBy.field && option.direction === sortBy.direction,
-    ) ?? sortOptions[0];
 
   return (
     <main className="container">
@@ -349,34 +409,27 @@ function App() {
           <div className="section-header">
             <h2>Expenses</h2>
 
-            <div className="sort-dropdown">
-              <button
-                className="sort-button"
-                onClick={() => setShowSortMenu((previous) => !previous)}
-              >
-                Sort by ▾
-              </button>
+            <div className="toolbar">
+              <Dropdown
+                prefix="Filter category"
+                options={categoryOptions}
+                value={categoryFilter}
+                onSelect={setCategoryFilter}
+              />
 
-              {showSortMenu && (
-                <ul className="sort-menu">
-                  {sortOptions.map((option) => (
-                    <li key={option.label}>
-                      <button
-                        className={option === currentSort ? "selected" : ""}
-                        onClick={() => {
-                          setSortBy({
-                            field: option.field,
-                            direction: option.direction,
-                          });
-                          setShowSortMenu(false);
-                        }}
-                      >
-                        {option.label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <Dropdown
+                prefix="Filter date"
+                options={dateOptions}
+                value={activeDateFilter}
+                onSelect={setDateFilter}
+              />
+
+              <Dropdown
+                prefix="Sort by"
+                options={sortOptions}
+                value={sortKey}
+                onSelect={setSortKey}
+              />
             </div>
           </div>
 
@@ -393,6 +446,11 @@ function App() {
               </thead>
 
               <tbody>
+                {displayedExpenses.length === 0 && (
+                  <tr>
+                    <td colSpan="5">No expenses match the selected filters.</td>
+                  </tr>
+                )}
                 {displayedExpenses.map((expense) => (
                   <tr key={expense.id}>
                     <EditableCell
