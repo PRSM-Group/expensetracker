@@ -8,8 +8,6 @@ import {
 } from "./expenseUtils";
 import "./App.css";
 
-
-
 const categoryColors = {
   Food: "#60a5fa",
   Transportation: "#34d399",
@@ -39,41 +37,6 @@ function formatDate(date) {
   });
 }
 
-function Dropdown({ prefix, options, value, onSelect }) {
-  const [open, setOpen] = useState(false);
-  const current =
-    options.find((option) => option.value === value) ?? options[0];
-
-  return (
-    <div className="sort-dropdown">
-      <button
-        className="sort-button"
-        onClick={() => setOpen((previous) => !previous)}
-      >
-        {prefix}: {current.label} ▾
-      </button>
-
-      {open && (
-        <ul className="sort-menu">
-          {options.map((option) => (
-            <li key={option.value}>
-              <button
-                className={option.value === current.value ? "selected" : ""}
-                onClick={() => {
-                  onSelect(option.value);
-                  setOpen(false);
-                }}
-              >
-                {option.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 function getToday() {
   const today = new Date();
   const year = today.getFullYear();
@@ -88,6 +51,43 @@ function formatPeso(amount) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+function Dropdown({ prefix, options, value, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const current =
+    options.find((option) => option.value === value) ?? options[0];
+
+  return (
+    <div className="sort-dropdown">
+      <button
+        type="button"
+        className="sort-button"
+        onClick={() => setOpen((previous) => !previous)}
+      >
+        {prefix}: {current.label} ▾
+      </button>
+
+      {open && (
+        <ul className="sort-menu">
+          {options.map((option) => (
+            <li key={option.value}>
+              <button
+                type="button"
+                className={option.value === current.value ? "selected" : ""}
+                onClick={() => {
+                  onSelect(option.value);
+                  setOpen(false);
+                }}
+              >
+                {option.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 function ExpensePieChart({ expenses }) {
@@ -162,13 +162,7 @@ function ExpensePieChart({ expenses }) {
 
             <div className="pie-center">
               <span>Total</span>
-              <strong>
-                ₱
-                {grandTotal.toLocaleString("en-PH", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </strong>
+              <strong>{formatPeso(grandTotal)}</strong>
             </div>
           </div>
 
@@ -187,13 +181,7 @@ function ExpensePieChart({ expenses }) {
                   </div>
 
                   <div className="legend-values">
-                    <span>
-                      ₱
-                      {item.total.toLocaleString("en-PH", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
+                    <span>{formatPeso(item.total)}</span>
                     <small>{percentage}%</small>
                   </div>
                 </li>
@@ -222,13 +210,13 @@ function EditableCell({ value, type = "text", options, onSave }) {
 
       onSave(amount);
     } else {
-      if (!editedValue.trim()) {
+      if (!String(editedValue).trim()) {
         setEditedValue(value);
         setEditing(false);
         return;
       }
 
-      onSave(editedValue);
+      onSave(type === "text" ? editedValue.trim() : editedValue);
     }
 
     setEditing(false);
@@ -278,17 +266,8 @@ function EditableCell({ value, type = "text", options, onSave }) {
 
   let displayValue = value;
 
-  if (type === "number") {
-    displayValue = formatPeso(value);
-  }
-
-  if (type === "date") {
-    displayValue = new Date(`${value}T00:00:00`).toLocaleDateString("en-PH", {
-      month: "short",
-      day: "2-digit",
-      year: "numeric",
-    });
-  }
+  if (type === "number") displayValue = formatPeso(value);
+  if (type === "date") displayValue = formatDate(value);
 
   return (
     <td
@@ -306,7 +285,6 @@ function EditableCell({ value, type = "text", options, onSave }) {
 
 function App() {
   const [expenses, setExpenses] = useState(initialExpenses);
-
   const [showForm, setShowForm] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -315,6 +293,7 @@ function App() {
     category: "Food",
     date: getToday(),
   });
+
   const [sortKey, setSortKey] = useState("default");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [dateFilter, setDateFilter] = useState("All");
@@ -328,41 +307,38 @@ function App() {
     }));
   }
 
- function handleSubmit(event) {
-  event.preventDefault();
+  function handleSubmit(event) {
+    event.preventDefault();
 
-  const newExpense = createExpense(formData);
+    const newExpense = createExpense(formData);
 
-  if (!newExpense) {
-    return;
+    if (!newExpense) {
+      return;
+    }
+
+    setExpenses((previousExpenses) => [newExpense, ...previousExpenses]);
+
+    setFormData({
+      name: "",
+      amount: "",
+      category: "Food",
+      date: getToday(),
+    });
+
+    setShowForm(false);
   }
 
-  setExpenses((previousExpenses) => [
-    newExpense,
-    ...previousExpenses,
-  ]);
+  function updateExpense(id, field, value) {
+    setExpenses((previousExpenses) =>
+      updateExpenseList(previousExpenses, id, field, value),
+    );
+  }
 
-  setFormData({
-    name: "",
-    amount: "",
-    category: "Food",
-    date: getToday(),
-  });
-
-  setShowForm(false);
-}
-
-function updateExpense(id, field, value) {
-  setExpenses((previousExpenses) =>
-    updateExpenseList(previousExpenses, id, field, value)
-  );
-}
-
-function handleDeleteExpense(id) {
-  setExpenses((currentExpenses) =>
-    deleteExpenseFromList(currentExpenses, id)
-  );
-}
+  function handleDeleteExpense(id) {
+    setExpenses((currentExpenses) =>
+      deleteExpenseFromList(currentExpenses, id),
+    );
+  }
 
   const dateOptions = [
     { label: "All", value: "All" },
@@ -407,30 +383,10 @@ function handleDeleteExpense(id) {
           Add Expense
         </button>
       </header>
-
       <div className="dashboard-grid">
         <section className="expenses">
-          <h2>Expenses</h2>
-
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Amount</th>
-                <th>Category</th>
-                <th>Date</th>
-                <th></th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {expenses.map((expense) => (
-                <tr key={expense.id}>
-                  <EditableCell
-                    value={expense.name}
-                    onSave={(value) => updateExpense(expense.id, "name", value)}
-                  />
+          <div className="section-header">
+            <h2>Expenses</h2>
 
             <div className="toolbar">
               <Dropdown
@@ -455,20 +411,15 @@ function handleDeleteExpense(id) {
               />
             </div>
           </div>
-
-                  <EditableCell
-                    value={expense.date}
-                    type="date"
-                    onSave={(value) => updateExpense(expense.id, "date", value)}
-                  />
-                  <td>
-                    <button
-                      className="delete-button"
-                      onClick={() => deleteExpense(expense.id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Amount</th>
+                  <th>Category</th>
+                  <th>Date</th>
+                  <th></th>
                 </tr>
               </thead>
 
@@ -478,6 +429,7 @@ function handleDeleteExpense(id) {
                     <td colSpan="5">No expenses match the selected filters.</td>
                   </tr>
                 )}
+
                 {displayedExpenses.map((expense) => (
                   <tr key={expense.id}>
                     <EditableCell
@@ -514,11 +466,11 @@ function handleDeleteExpense(id) {
 
                     <td>
                       <button
-  className="delete-button"
-  onClick={() => handleDeleteExpense(expense.id)}
->
-  Delete
-</button>
+                        className="delete-button"
+                        onClick={() => handleDeleteExpense(expense.id)}
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -527,7 +479,7 @@ function handleDeleteExpense(id) {
           </div>
         </section>
 
-        <ExpensePieChart expenses={expenses} colors={categoryColors} />
+        <ExpensePieChart expenses={expenses} />
       </div>
 
       {showForm && (
