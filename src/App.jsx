@@ -205,56 +205,15 @@ function App() {
         <section className="expenses">
           <h2>Expenses</h2>
 
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Amount</th>
-                <th>Category</th>
-                <th>Date</th>
-                <th></th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {expenses.map((expense) => (
-                <tr key={expense.id}>
-                  <EditableCell
-                    value={expense.name}
-                    onSave={(value) => updateExpense(expense.id, "name", value)}
-                  />
-
-                  <EditableCell
-                    value={expense.amount}
-                    type="number"
-                    onSave={(value) =>
-                      updateExpense(expense.id, "amount", value)
-                    }
-                  />
-
-                  <EditableCell
-                    value={expense.category}
-                    type="select"
-                    options={categories}
-                    onSave={(value) =>
-                      updateExpense(expense.id, "category", value)
-                    }
-                  />
-
-                  <EditableCell
-                    value={expense.date}
-                    type="date"
-                    onSave={(value) => updateExpense(expense.id, "date", value)}
-                  />
-                  <td>
-                    <button
-                      className="delete-button"
-                      onClick={() => deleteExpense(expense.id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Amount</th>
+                  <th>Category</th>
+                  <th>Date</th>
+                  <th></th>
                 </tr>
               </thead>
 
@@ -302,6 +261,52 @@ function App() {
                     </td>
                   </tr>
                 ))}
+
+                <tbody>
+                  {expenses.map((expense) => (
+                    <tr key={expense.id}>
+                      <EditableCell
+                        value={expense.name}
+                        onSave={(value) =>
+                          updateExpense(expense.id, "name", value)
+                        }
+                      />
+
+                      <EditableCell
+                        value={expense.amount}
+                        type="number"
+                        onSave={(value) =>
+                          updateExpense(expense.id, "amount", value)
+                        }
+                      />
+
+                      <EditableCell
+                        value={expense.category}
+                        type="select"
+                        options={categories}
+                        onSave={(value) =>
+                          updateExpense(expense.id, "category", value)
+                        }
+                      />
+
+                      <EditableCell
+                        value={expense.date}
+                        type="date"
+                        onSave={(value) =>
+                          updateExpense(expense.id, "date", value)
+                        }
+                      />
+                      <td>
+                        <button
+                          className="delete-button"
+                          onClick={() => deleteExpense(expense.id)}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
               </tbody>
             </table>
           </div>
