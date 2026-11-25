@@ -306,7 +306,9 @@ function EditableCell({ value, type = "text", options, onSave }) {
 
 function App() {
   const [expenses, setExpenses] = useState(initialExpenses);
+
   const [showForm, setShowForm] = useState(false);
+
   const [formData, setFormData] = useState({
     name: "",
     amount: "",
@@ -408,8 +410,27 @@ function handleDeleteExpense(id) {
 
       <div className="dashboard-grid">
         <section className="expenses">
-          <div className="section-header">
-            <h2>Expenses</h2>
+          <h2>Expenses</h2>
+
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Amount</th>
+                <th>Category</th>
+                <th>Date</th>
+                <th></th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {expenses.map((expense) => (
+                <tr key={expense.id}>
+                  <EditableCell
+                    value={expense.name}
+                    onSave={(value) => updateExpense(expense.id, "name", value)}
+                  />
 
             <div className="toolbar">
               <Dropdown
@@ -435,15 +456,19 @@ function handleDeleteExpense(id) {
             </div>
           </div>
 
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Amount</th>
-                  <th>Category</th>
-                  <th>Date</th>
-                  <th></th>
+                  <EditableCell
+                    value={expense.date}
+                    type="date"
+                    onSave={(value) => updateExpense(expense.id, "date", value)}
+                  />
+                  <td>
+                    <button
+                      className="delete-button"
+                      onClick={() => deleteExpense(expense.id)}
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               </thead>
 
