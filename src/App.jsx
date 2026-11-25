@@ -29,6 +29,7 @@ function getToday() {
   return `${year}-${month}-${day}`;
 }
 
+<<<<<<< Updated upstream
 function ExpensePieChart({ expenses }) {
   const totalsByCategory = categories
     .map((category) => {
@@ -62,12 +63,46 @@ function ExpensePieChart({ expenses }) {
       percent,
       cumulativePercent: prevCumulative,
       nextCumulative: prevCumulative + percent,
+=======
+function formatPeso(amount) {
+  return `₱${Number(amount).toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function ExpensePieChart({ expenses, colors }) {
+  const totals = categories
+    .map((category) => ({
+      category,
+      total: expenses
+        .filter((expense) => expense.category === category)
+        .reduce((sum, expense) => sum + Number(expense.amount), 0),
+      color: colors[category] || "#94a3b8",
+    }))
+    .filter((item) => item.total > 0);
+
+  const grandTotal = totals.reduce((sum, item) => sum + item.total, 0);
+  const radius = 70;
+  const circumference = 2 * Math.PI * radius;
+
+  const slices = totals.reduce((acc, item) => {
+    const startPercent = acc.length > 0 ? acc[acc.length - 1].endPercent : 0;
+    const fraction = item.total / grandTotal;
+
+    acc.push({
+      ...item,
+      fraction,
+      startPercent,
+      endPercent: startPercent + fraction,
+>>>>>>> Stashed changes
     });
 
     return acc;
   }, []);
 
   return (
+<<<<<<< Updated upstream
     <aside className="chart-card">
       <h2>Overview</h2>
 
@@ -135,13 +170,63 @@ function ExpensePieChart({ expenses }) {
                     </span>
                     <small>{percentage}%</small>
                   </div>
+=======
+    <section className="pie-chart-section">
+      <h2>Spending by Category</h2>
+
+      {grandTotal === 0 ? (
+        <p>No expenses to display yet.</p>
+      ) : (
+        <div className="pie-chart-content">
+          <svg width="180" height="180" viewBox="0 0 180 180">
+            {slices.map((slice) => {
+              const dashLength = slice.fraction * circumference;
+              const dashOffset = -slice.startPercent * circumference;
+
+              return (
+                <circle
+                  key={slice.category}
+                  cx="90"
+                  cy="90"
+                  r={radius}
+                  fill="transparent"
+                  stroke={slice.color}
+                  strokeWidth="28"
+                  strokeDasharray={`${dashLength} ${circumference}`}
+                  strokeDashoffset={dashOffset}
+                  transform="rotate(-90 90 90)"
+                />
+              );
+            })}
+          </svg>
+
+          <ul className="pie-legend">
+            {slices.map((slice) => {
+              const percent = (slice.fraction * 100).toFixed(1);
+              return (
+                <li key={slice.category}>
+                  <span
+                    className="legend-swatch"
+                    style={{ backgroundColor: slice.color }}
+                  />
+                  <span>{slice.category}</span>
+                  <strong>
+                    {formatPeso(slice.total)} ({percent}%)
+                  </strong>
+>>>>>>> Stashed changes
                 </li>
               );
             })}
           </ul>
+<<<<<<< Updated upstream
         </>
       )}
     </aside>
+=======
+        </div>
+      )}
+    </section>
+>>>>>>> Stashed changes
   );
 }
 
@@ -218,10 +303,7 @@ function EditableCell({ value, type = "text", options, onSave }) {
   let displayValue = value;
 
   if (type === "number") {
-    displayValue = `₱${Number(value).toLocaleString("en-PH", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
+    displayValue = formatPeso(value);
   }
 
   if (type === "date") {
@@ -319,6 +401,40 @@ function App() {
         <section className="expenses">
           <h2>Expenses</h2>
 
+<<<<<<< Updated upstream
+=======
+            <div className="sort-dropdown">
+              <button
+                className="sort-button"
+                onClick={() => setShowSortMenu((previous) => !previous)}
+              >
+                Sort by ▾
+              </button>
+
+              {showSortMenu && (
+                <ul className="sort-menu">
+                  {sortOptions.map((option) => (
+                    <li key={option.label}>
+                      <button
+                        className={option === currentSort ? "selected" : ""}
+                        onClick={() => {
+                          setSortBy({
+                            field: option.field,
+                            direction: option.direction,
+                          });
+                          setShowSortMenu(false);
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+>>>>>>> Stashed changes
           <div className="table-container">
             <table>
               <thead>
@@ -365,6 +481,7 @@ function App() {
                         updateExpense(expense.id, "date", value)
                       }
                     />
+
                     <td>
                       <button
                         className="delete-button"
@@ -380,7 +497,7 @@ function App() {
           </div>
         </section>
 
-        <ExpensePieChart expenses={expenses} />
+        <ExpensePieChart expenses={expenses} colors={categoryColors} />
       </div>
 
       {showForm && (
