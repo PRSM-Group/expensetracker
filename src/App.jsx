@@ -1,15 +1,14 @@
 import { useState } from "react";
 import { initialExpenses } from "./data/expenses";
+import {
+  categories,
+  createExpense,
+  updateExpense as updateExpenseList,
+  deleteExpense as deleteExpenseFromList,
+} from "./expenseUtils";
 import "./App.css";
 
-const categories = [
-  "Food",
-  "Transportation",
-  "Shopping",
-  "Bills",
-  "Entertainment",
-  "Other",
-];
+
 
 const categoryColors = {
   Food: "#60a5fa",
@@ -20,6 +19,61 @@ const categoryColors = {
   Other: "#94a3b8",
 };
 
+const sortOptions = [
+  { label: "Default", value: "default" },
+  { label: "Category", value: "category" },
+  { label: "Amount: Low to High", value: "amount-asc" },
+  { label: "Amount: High to Low", value: "amount-desc" },
+];
+
+const categoryOptions = [
+  { label: "All", value: "All" },
+  ...categories.map((category) => ({ label: category, value: category })),
+];
+
+function formatDate(date) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-PH", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
+
+function Dropdown({ prefix, options, value, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const current =
+    options.find((option) => option.value === value) ?? options[0];
+
+  return (
+    <div className="sort-dropdown">
+      <button
+        className="sort-button"
+        onClick={() => setOpen((previous) => !previous)}
+      >
+        {prefix}: {current.label} ▾
+      </button>
+
+      {open && (
+        <ul className="sort-menu">
+          {options.map((option) => (
+            <li key={option.value}>
+              <button
+                className={option.value === current.value ? "selected" : ""}
+                onClick={() => {
+                  onSelect(option.value);
+                  setOpen(false);
+                }}
+              >
+                {option.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function getToday() {
   const today = new Date();
   const year = today.getFullYear();
@@ -27,6 +81,129 @@ function getToday() {
   const day = String(today.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+function formatPeso(amount) {
+  return `₱${Number(amount).toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function ExpensePieChart({ expenses }) {
+  const totalsByCategory = categories
+    .map((category) => {
+      const total = expenses
+        .filter((expense) => expense.category === category)
+        .reduce((sum, expense) => sum + Number(expense.amount), 0);
+
+      return {
+        category,
+        total,
+        color: categoryColors[category],
+      };
+    })
+    .filter((item) => item.total > 0);
+
+  const grandTotal = totalsByCategory.reduce(
+    (sum, item) => sum + item.total,
+    0,
+  );
+
+  const radius = 70;
+  const circumference = 2 * Math.PI * radius;
+
+  const slices = totalsByCategory.reduce((acc, item) => {
+    const percent = item.total / grandTotal;
+    const prevCumulative =
+      acc.length > 0 ? acc[acc.length - 1].nextCumulative : 0;
+
+    acc.push({
+      ...item,
+      percent,
+      cumulativePercent: prevCumulative,
+      nextCumulative: prevCumulative + percent,
+    });
+
+    return acc;
+  }, []);
+
+  return (
+    <aside className="chart-card">
+      <h2>Overview</h2>
+
+      {grandTotal === 0 ? (
+        <p className="empty-chart">No expenses to display.</p>
+      ) : (
+        <>
+          <div className="pie-wrapper">
+            <svg viewBox="0 0 200 200" className="pie-svg">
+              {slices.map((slice) => {
+                const strokeDasharray = `${slice.percent * circumference} ${circumference}`;
+                const strokeDashoffset =
+                  -slice.cumulativePercent * circumference;
+
+                return (
+                  <circle
+                    key={slice.category}
+                    cx="100"
+                    cy="100"
+                    r={radius}
+                    fill="transparent"
+                    stroke={slice.color}
+                    strokeWidth="28"
+                    strokeDasharray={strokeDasharray}
+                    strokeDashoffset={strokeDashoffset}
+                    transform="rotate(-90 100 100)"
+                  />
+                );
+              })}
+            </svg>
+
+            <div className="pie-center">
+              <span>Total</span>
+              <strong>
+                ₱
+                {grandTotal.toLocaleString("en-PH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </strong>
+            </div>
+          </div>
+
+          <ul className="chart-legend">
+            {totalsByCategory.map((item) => {
+              const percentage = ((item.total / grandTotal) * 100).toFixed(1);
+
+              return (
+                <li key={item.category} className="legend-item">
+                  <div className="legend-label">
+                    <span
+                      className="legend-dot"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span>{item.category}</span>
+                  </div>
+
+                  <div className="legend-values">
+                    <span>
+                      ₱
+                      {item.total.toLocaleString("en-PH", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                    <small>{percentage}%</small>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </aside>
+  );
 }
 
 function EditableCell({ value, type = "text", options, onSave }) {
@@ -102,10 +279,7 @@ function EditableCell({ value, type = "text", options, onSave }) {
   let displayValue = value;
 
   if (type === "number") {
-    displayValue = `₱${Number(value).toLocaleString("en-PH", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
+    displayValue = formatPeso(value);
   }
 
   if (type === "date") {
@@ -141,6 +315,9 @@ function App() {
     category: "Food",
     date: getToday(),
   });
+  const [sortKey, setSortKey] = useState("default");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [dateFilter, setDateFilter] = useState("All");
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -151,42 +328,72 @@ function App() {
     }));
   }
 
-  function handleSubmit(event) {
-    event.preventDefault();
+ function handleSubmit(event) {
+  event.preventDefault();
 
-    const newExpense = {
-      id: Date.now(),
-      name: formData.name.trim(),
-      amount: Number(formData.amount),
-      category: formData.category,
-      date: formData.date,
-    };
+  const newExpense = createExpense(formData);
 
-    setExpenses((previousExpenses) => [newExpense, ...previousExpenses]);
-
-    setFormData({
-      name: "",
-      amount: "",
-      category: "Food",
-      date: getToday(),
-    });
-
-    setShowForm(false);
+  if (!newExpense) {
+    return;
   }
 
-  function updateExpense(id, field, value) {
-    setExpenses((previousExpenses) =>
-      previousExpenses.map((expense) =>
-        expense.id === id ? { ...expense, [field]: value } : expense,
-      ),
-    );
-  }
+  setExpenses((previousExpenses) => [
+    newExpense,
+    ...previousExpenses,
+  ]);
 
-  const deleteExpense = (id) => {
-    setExpenses((currentExpenses) =>
-      currentExpenses.filter((expense) => expense.id !== id),
-    );
-  };
+  setFormData({
+    name: "",
+    amount: "",
+    category: "Food",
+    date: getToday(),
+  });
+
+  setShowForm(false);
+}
+
+function updateExpense(id, field, value) {
+  setExpenses((previousExpenses) =>
+    updateExpenseList(previousExpenses, id, field, value)
+  );
+}
+
+function handleDeleteExpense(id) {
+  setExpenses((currentExpenses) =>
+    deleteExpenseFromList(currentExpenses, id)
+  );
+}
+
+  const dateOptions = [
+    { label: "All", value: "All" },
+    ...[...new Set(expenses.map((expense) => expense.date))]
+      .sort()
+      .map((date) => ({ label: formatDate(date), value: date })),
+  ];
+
+  // If the selected date no longer exists (edited or deleted), fall back to All
+  const activeDateFilter = dateOptions.some(
+    (option) => option.value === dateFilter,
+  )
+    ? dateFilter
+    : "All";
+
+  const filteredExpenses = expenses.filter(
+    (expense) =>
+      (categoryFilter === "All" || expense.category === categoryFilter) &&
+      (activeDateFilter === "All" || expense.date === activeDateFilter),
+  );
+
+  const displayedExpenses = [...filteredExpenses].sort((a, b) => {
+    if (sortKey === "category") {
+      return categories.indexOf(a.category) - categories.indexOf(b.category);
+    }
+
+    if (sortKey === "amount-asc") return a.amount - b.amount;
+    if (sortKey === "amount-desc") return b.amount - a.amount;
+
+    return 0;
+  });
 
   return (
     <main className="container">
@@ -225,22 +432,29 @@ function App() {
                     onSave={(value) => updateExpense(expense.id, "name", value)}
                   />
 
-                  <EditableCell
-                    value={expense.amount}
-                    type="number"
-                    onSave={(value) =>
-                      updateExpense(expense.id, "amount", value)
-                    }
-                  />
+            <div className="toolbar">
+              <Dropdown
+                prefix="Filter category"
+                options={categoryOptions}
+                value={categoryFilter}
+                onSelect={setCategoryFilter}
+              />
 
-                  <EditableCell
-                    value={expense.category}
-                    type="select"
-                    options={categories}
-                    onSave={(value) =>
-                      updateExpense(expense.id, "category", value)
-                    }
-                  />
+              <Dropdown
+                prefix="Filter date"
+                options={dateOptions}
+                value={activeDateFilter}
+                onSelect={setDateFilter}
+              />
+
+              <Dropdown
+                prefix="Sort by"
+                options={sortOptions}
+                value={sortKey}
+                onSelect={setSortKey}
+              />
+            </div>
+          </div>
 
                   <EditableCell
                     value={expense.date}
@@ -259,7 +473,12 @@ function App() {
               </thead>
 
               <tbody>
-                {expenses.map((expense) => (
+                {displayedExpenses.length === 0 && (
+                  <tr>
+                    <td colSpan="5">No expenses match the selected filters.</td>
+                  </tr>
+                )}
+                {displayedExpenses.map((expense) => (
                   <tr key={expense.id}>
                     <EditableCell
                       value={expense.name}
@@ -292,13 +511,14 @@ function App() {
                         updateExpense(expense.id, "date", value)
                       }
                     />
+
                     <td>
                       <button
-                        className="delete-button"
-                        onClick={() => deleteExpense(expense.id)}
-                      >
-                        Delete
-                      </button>
+  className="delete-button"
+  onClick={() => handleDeleteExpense(expense.id)}
+>
+  Delete
+</button>
                     </td>
                   </tr>
                 ))}
@@ -307,7 +527,7 @@ function App() {
           </div>
         </section>
 
-        <ExpensePieChart expenses={expenses} />
+        <ExpensePieChart expenses={expenses} colors={categoryColors} />
       </div>
 
       {showForm && (
