@@ -1,15 +1,14 @@
 import { useState } from "react";
 import { initialExpenses } from "./data/expenses";
+import {
+  categories,
+  createExpense,
+  updateExpense as updateExpenseList,
+  deleteExpense as deleteExpenseFromList,
+} from "./expenseUtils";
 import "./App.css";
 
-const categories = [
-  "Food",
-  "Transportation",
-  "Shopping",
-  "Bills",
-  "Entertainment",
-  "Other",
-];
+
 
 const categoryColors = {
   Food: "#60a5fa",
@@ -327,42 +326,41 @@ function App() {
     }));
   }
 
-  function handleSubmit(event) {
-    event.preventDefault();
+ function handleSubmit(event) {
+  event.preventDefault();
 
-    const newExpense = {
-      id: Date.now(),
-      name: formData.name.trim(),
-      amount: Number(formData.amount),
-      category: formData.category,
-      date: formData.date,
-    };
+  const newExpense = createExpense(formData);
 
-    setExpenses((previousExpenses) => [newExpense, ...previousExpenses]);
-
-    setFormData({
-      name: "",
-      amount: "",
-      category: "Food",
-      date: getToday(),
-    });
-
-    setShowForm(false);
+  if (!newExpense) {
+    return;
   }
 
-  function updateExpense(id, field, value) {
-    setExpenses((previousExpenses) =>
-      previousExpenses.map((expense) =>
-        expense.id === id ? { ...expense, [field]: value } : expense,
-      ),
-    );
-  }
+  setExpenses((previousExpenses) => [
+    newExpense,
+    ...previousExpenses,
+  ]);
 
-  const deleteExpense = (id) => {
-    setExpenses((currentExpenses) =>
-      currentExpenses.filter((expense) => expense.id !== id),
-    );
-  };
+  setFormData({
+    name: "",
+    amount: "",
+    category: "Food",
+    date: getToday(),
+  });
+
+  setShowForm(false);
+}
+
+function updateExpense(id, field, value) {
+  setExpenses((previousExpenses) =>
+    updateExpenseList(previousExpenses, id, field, value)
+  );
+}
+
+function handleDeleteExpense(id) {
+  setExpenses((currentExpenses) =>
+    deleteExpenseFromList(currentExpenses, id)
+  );
+}
 
   const dateOptions = [
     { label: "All", value: "All" },
@@ -491,11 +489,11 @@ function App() {
 
                     <td>
                       <button
-                        className="delete-button"
-                        onClick={() => deleteExpense(expense.id)}
-                      >
-                        Delete
-                      </button>
+  className="delete-button"
+  onClick={() => handleDeleteExpense(expense.id)}
+>
+  Delete
+</button>
                     </td>
                   </tr>
                 ))}
