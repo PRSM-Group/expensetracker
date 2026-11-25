@@ -1,0 +1,86 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(
+            name: 'CI_BUILD_NUMBER',
+            defaultValue: '',
+            description: 'Build number from the main-branch CI pipeline to deploy'
+        )
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['DEV', 'TEST', 'ACC', 'PROD'],
+            description: 'Target deployment environment'
+        )
+    }
+
+    environment {
+        // Adjust if your Multibranch pipeline is inside a folder, e.g. 'folder/expense-tracker-ci/main'
+        MAIN_CI_JOB = 'expense-tracker-ci/main'
+        ARTIFACT_PREFIX = 'expense-tracker'
+    }
+
+    stages {
+        stage('Log & Validate Parameters') {
+            steps {
+                script {
+                    if (!params.CI_BUILD_NUMBER?.trim()) {
+                        error('CI_BUILD_NUMBER is required.')
+                    }
+                }
+                echo "Deploying CI_BUILD_NUMBER=${params.CI_BUILD_NUMBER} to ENVIRONMENT=${params.ENVIRONMENT} (CD BUILD_NUMBER=${env.BUILD_NUMBER})"
+            }
+        }
+
+        stage('Retrieve & Extract Artifact') {
+            steps {
+                sh 'rm -rf cd-work && mkdir -p cd-work'
+                copyArtifacts(
+                    projectName: "${env.MAIN_CI_JOB}",
+                    selector: specific("${params.CI_BUILD_NUMBER}"),
+                    filter: "${env.ARTIFACT_PREFIX}-${params.CI_BUILD_NUMBER}.tar.gz",
+                    target: 'cd-work',
+                    fingerprintArtifacts: true
+                )
+                sh """
+                    cd cd-work
+                    tar -xzf "${env.ARTIFACT_PREFIX}-${params.CI_BUILD_NUMBER}.tar.gz"
+                    test -d dist
+                    test -f Dockerfile
+                """
+            }
+        }
+
+        stage('Build Docker Image & Start Container') {
+            steps {
+                script {
+                    def envConfig = [
+                        DEV : [container: 'expense-tracker-dev',  port: '8081'],
+                        TEST: [container: 'expense-tracker-test', port: '8082'],
+                        ACC : [container: 'expense-tracker-acc',  port: '8083'],
+                        PROD: [container: 'expense-tracker-prod', port: '8084']
+                    ]
+                    def target = envConfig[params.ENVIRONMENT]
+                    def imageTag = "${env.ARTIFACT_PREFIX}:${params.ENVIRONMENT.toLowerCase()}-${params.CI_BUILD_NUMBER}"
+
+                    sh """
+                        cd cd-work
+                        docker build -t "${imageTag}" .
+                        docker rm -f "${target.container}" || true
+                        docker run -d \\
+                          --name "${target.container}" \\
+                          -p "${target.port}:80" \\
+                          "${imageTag}"
+                        echo "Running ${imageTag} as '${target.container}' on http://localhost:${target.port}"
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'rm -rf cd-work || true'
+        }
+    }
+}
