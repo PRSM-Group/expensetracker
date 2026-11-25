@@ -11,13 +11,6 @@ const categories = [
   "Other",
 ];
 
-const sortOptions = [
-  { label: "Default", field: null, direction: "asc" },
-  { label: "Category", field: "category", direction: "asc" },
-  { label: "Amount: Low to High", field: "amount", direction: "asc" },
-  { label: "Amount: High to Low", field: "amount", direction: "desc" },
-];
-
 const categoryColors = {
   Food: "#60a5fa",
   Transportation: "#34d399",
@@ -148,8 +141,6 @@ function App() {
     category: "Food",
     date: getToday(),
   });
-  const [sortBy, setSortBy] = useState({ field: null, direction: "asc" });
-  const [showSortMenu, setShowSortMenu] = useState(false);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -197,26 +188,6 @@ function App() {
     );
   };
 
-  const displayedExpenses = [...expenses].sort((a, b) => {
-    if (sortBy.field === "category") {
-      return categories.indexOf(a.category) - categories.indexOf(b.category);
-    }
-
-    if (sortBy.field === "amount") {
-      return sortBy.direction === "asc"
-        ? a.amount - b.amount
-        : b.amount - a.amount;
-    }
-
-    return 0;
-  });
-
-  const currentSort =
-    sortOptions.find(
-      (option) =>
-        option.field === sortBy.field && option.direction === sortBy.direction,
-    ) ?? sortOptions[0];
-
   return (
     <main className="container">
       <header className="header">
@@ -232,39 +203,7 @@ function App() {
 
       <div className="dashboard-grid">
         <section className="expenses">
-          <div className="section-header">
-            <h2>Expenses</h2>
-
-            <div className="sort-dropdown">
-              <button
-                className="sort-button"
-                onClick={() => setShowSortMenu((previous) => !previous)}
-              >
-                Sort by ▾
-              </button>
-
-              {showSortMenu && (
-                <ul className="sort-menu">
-                  {sortOptions.map((option) => (
-                    <li key={option.label}>
-                      <button
-                        className={option === currentSort ? "selected" : ""}
-                        onClick={() => {
-                          setSortBy({
-                            field: option.field,
-                            direction: option.direction,
-                          });
-                          setShowSortMenu(false);
-                        }}
-                      >
-                        {option.label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+          <h2>Expenses</h2>
 
         <div className="table-container">
           <table>
@@ -320,7 +259,7 @@ function App() {
               </thead>
 
               <tbody>
-                {displayedExpenses.map((expense) => (
+                {expenses.map((expense) => (
                   <tr key={expense.id}>
                     <EditableCell
                       value={expense.name}
