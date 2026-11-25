@@ -11,6 +11,15 @@ const categories = [
   "Other",
 ];
 
+const categoryColors = {
+  Food: "#60a5fa",
+  Transportation: "#34d399",
+  Shopping: "#f472b6",
+  Bills: "#fbbf24",
+  Entertainment: "#a78bfa",
+  Other: "#94a3b8",
+};
+
 function getToday() {
   const today = new Date();
   const year = today.getFullYear();
@@ -18,6 +27,122 @@ function getToday() {
   const day = String(today.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+function ExpensePieChart({ expenses }) {
+  const totalsByCategory = categories
+    .map((category) => {
+      const total = expenses
+        .filter((expense) => expense.category === category)
+        .reduce((sum, expense) => sum + Number(expense.amount), 0);
+
+      return {
+        category,
+        total,
+        color: categoryColors[category],
+      };
+    })
+    .filter((item) => item.total > 0);
+
+  const grandTotal = totalsByCategory.reduce(
+    (sum, item) => sum + item.total,
+    0,
+  );
+
+  const radius = 70;
+  const circumference = 2 * Math.PI * radius;
+
+  const slices = totalsByCategory.reduce((acc, item) => {
+    const percent = item.total / grandTotal;
+    const prevCumulative =
+      acc.length > 0 ? acc[acc.length - 1].nextCumulative : 0;
+
+    acc.push({
+      ...item,
+      percent,
+      cumulativePercent: prevCumulative,
+      nextCumulative: prevCumulative + percent,
+    });
+
+    return acc;
+  }, []);
+
+  return (
+    <aside className="chart-card">
+      <h2>Overview</h2>
+
+      {grandTotal === 0 ? (
+        <p className="empty-chart">No expenses to display.</p>
+      ) : (
+        <>
+          <div className="pie-wrapper">
+            <svg viewBox="0 0 200 200" className="pie-svg">
+              {slices.map((slice) => {
+                const strokeDasharray = `${slice.percent * circumference} ${circumference}`;
+                const strokeDashoffset =
+                  -slice.cumulativePercent * circumference;
+
+                return (
+                  <circle
+                    key={slice.category}
+                    cx="100"
+                    cy="100"
+                    r={radius}
+                    fill="transparent"
+                    stroke={slice.color}
+                    strokeWidth="28"
+                    strokeDasharray={strokeDasharray}
+                    strokeDashoffset={strokeDashoffset}
+                    transform="rotate(-90 100 100)"
+                  />
+                );
+              })}
+            </svg>
+
+            <div className="pie-center">
+              <span>Total</span>
+              <strong>
+                ₱
+                {grandTotal.toLocaleString("en-PH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </strong>
+            </div>
+          </div>
+
+          <ul className="chart-legend">
+            {totalsByCategory.map((item) => {
+              const percentage = ((item.total / grandTotal) * 100).toFixed(1);
+
+              return (
+                <li key={item.category} className="legend-item">
+                  <div className="legend-label">
+                    <span
+                      className="legend-dot"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span>{item.category}</span>
+                  </div>
+
+                  <div className="legend-values">
+                    <span>
+                      ₱
+                      {item.total.toLocaleString("en-PH", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                    <small>{percentage}%</small>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </aside>
+  );
 }
 
 function EditableCell({ value, type = "text", options, onSave }) {
@@ -123,9 +248,7 @@ function EditableCell({ value, type = "text", options, onSave }) {
 
 function App() {
   const [expenses, setExpenses] = useState(initialExpenses);
-
   const [showForm, setShowForm] = useState(false);
-
   const [formData, setFormData] = useState({
     name: "",
     amount: "",
@@ -192,65 +315,73 @@ function App() {
         </button>
       </header>
 
-      <section className="expenses">
-        <h2>Expenses</h2>
+      <div className="dashboard-grid">
+        <section className="expenses">
+          <h2>Expenses</h2>
 
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Amount</th>
-                <th>Category</th>
-                <th>Date</th>
-                <th></th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {expenses.map((expense) => (
-                <tr key={expense.id}>
-                  <EditableCell
-                    value={expense.name}
-                    onSave={(value) => updateExpense(expense.id, "name", value)}
-                  />
-
-                  <EditableCell
-                    value={expense.amount}
-                    type="number"
-                    onSave={(value) =>
-                      updateExpense(expense.id, "amount", value)
-                    }
-                  />
-
-                  <EditableCell
-                    value={expense.category}
-                    type="select"
-                    options={categories}
-                    onSave={(value) =>
-                      updateExpense(expense.id, "category", value)
-                    }
-                  />
-
-                  <EditableCell
-                    value={expense.date}
-                    type="date"
-                    onSave={(value) => updateExpense(expense.id, "date", value)}
-                  />
-                  <td>
-                    <button
-                      className="delete-button"
-                      onClick={() => deleteExpense(expense.id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Amount</th>
+                  <th>Category</th>
+                  <th>Date</th>
+                  <th></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </thead>
+
+              <tbody>
+                {expenses.map((expense) => (
+                  <tr key={expense.id}>
+                    <EditableCell
+                      value={expense.name}
+                      onSave={(value) =>
+                        updateExpense(expense.id, "name", value)
+                      }
+                    />
+
+                    <EditableCell
+                      value={expense.amount}
+                      type="number"
+                      onSave={(value) =>
+                        updateExpense(expense.id, "amount", value)
+                      }
+                    />
+
+                    <EditableCell
+                      value={expense.category}
+                      type="select"
+                      options={categories}
+                      onSave={(value) =>
+                        updateExpense(expense.id, "category", value)
+                      }
+                    />
+
+                    <EditableCell
+                      value={expense.date}
+                      type="date"
+                      onSave={(value) =>
+                        updateExpense(expense.id, "date", value)
+                      }
+                    />
+                    <td>
+                      <button
+                        className="delete-button"
+                        onClick={() => deleteExpense(expense.id)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <ExpensePieChart expenses={expenses} />
+      </div>
 
       {showForm && (
         <div className="modal-overlay">
