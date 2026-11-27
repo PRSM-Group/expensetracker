@@ -1,10 +1,14 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'NodeJS-24'
+    }
+
     environment {
         SONAR_PROJECT_KEY  = 'expense-tracker'
         SONAR_PROJECT_NAME = 'Expense Tracker'
-        ARCHIVE_NAME       = "expense-tracker-${env.BRANCH_NAME}-${env.BUILD_NUMBER}.tar.gz"
+        ARCHIVE_NAME       = "expense-tracker-${env.BUILD_NUMBER}.tar.gz"
     }
 
     stages {
@@ -16,7 +20,7 @@ pipeline {
 
         stage('Install and Test') {
             steps {
-                sh 'npm ci && npm test'
+                sh 'npm ci && npm test -- --run'
             }
         }
 
@@ -29,10 +33,7 @@ pipeline {
 
         stage('SonarQube analysis') {
             when {
-                anyOf {
-                    branch 'develop'
-                    branch 'main'
-                }
+                branch 'main'
             }
             steps {
                 withSonarQubeEnv('SonarQube') {
