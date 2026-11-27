@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'NodeJS-24'
+        nodejs 'NodeJS-22'
         'hudson.plugins.sonar.SonarRunnerInstallation' 'SonarScanner'
     }
 
@@ -37,7 +37,7 @@ pipeline {
                 branch 'main'
             }
             steps {
-                withSonarQubeEnv('SonarQube-Lab') {
+                withSonarQubeEnv('SonarQube') {
                     script {
                         def scannerHome = tool 'SonarScanner'
                         sh """
