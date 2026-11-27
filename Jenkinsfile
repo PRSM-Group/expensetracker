@@ -38,13 +38,16 @@ pipeline {
             }
             steps {
                 withSonarQubeEnv('SonarQube-Lab') {
-                    sh """
-                        sonar-scanner \\
-                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \\
-                          -Dsonar.projectName="${SONAR_PROJECT_NAME}" \\
-                          -Dsonar.sources=src \\
-                          -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-                    """
+                    script {
+                        def scannerHome = tool 'SonarScanner'
+                        sh """
+                            "${scannerHome}/bin/sonar-scanner" \\
+                              -Dsonar.projectKey=${SONAR_PROJECT_KEY} \\
+                              -Dsonar.projectName="${SONAR_PROJECT_NAME}" \\
+                              -Dsonar.sources=src \\
+                              -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+                        """
+                    }
                 }
             }
         }
@@ -86,6 +89,12 @@ pipeline {
                 """
                 archiveArtifacts artifacts: "${ARCHIVE_NAME}", fingerprint: true
             }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
         }
     }
 }
