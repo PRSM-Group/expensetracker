@@ -15,8 +15,7 @@ pipeline {
     }
 
     environment {
-        // Adjust if your Multibranch pipeline is inside a folder, e.g. 'folder/expense-tracker-ci/main'
-        MAIN_CI_JOB = 'expense-tracker-ci/main'
+        MAIN_CI_JOB = 'Expense-Tracker_main'
         ARTIFACT_PREFIX = 'expense-tracker'
     }
 
