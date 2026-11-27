@@ -36,7 +36,7 @@ pipeline {
                 branch 'main'
             }
             steps {
-                withSonarQubeEnv('SonarQube') {
+                withSonarQubeEnv('SonarQube-Lab') {
                     sh """
                         sonar-scanner \\
                           -Dsonar.projectKey=${SONAR_PROJECT_KEY} \\
